@@ -69,10 +69,11 @@ def load_config(config_path: Path | None = None) -> Config:
             cfg.default_provider = raw["default_provider"]
         if "providers" in raw:
             for name, pcfg in raw["providers"].items():
+                existing = cfg.providers.get(name)
                 cfg.providers[name] = ProviderConfig(
-                    base_url=pcfg.get("base_url", cfg.providers[name].base_url),
+                    base_url=pcfg.get("base_url", existing.base_url if existing else ""),
                     requests_per_second=pcfg.get(
-                        "requests_per_second", cfg.providers[name].requests_per_second
+                        "requests_per_second", existing.requests_per_second if existing else 1.0
                     ),
                 )
         if "defaults" in raw:

@@ -1,5 +1,7 @@
 """Integration tests for CLI commands."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 from typer.testing import CliRunner
 
@@ -42,3 +44,51 @@ class TestCLIIntegration:
         result = runner.invoke(app, ["inbox", "--help"])
         assert result.exit_code == 0
         assert "--limit" in result.output
+
+    @patch("tempmail_cli.cli.list_providers")
+    @patch("tempmail_cli.cli.load_config")
+    def test_providers_command(self, mock_load_config, mock_list_providers):
+        mock_cfg = MagicMock()
+        mock_cfg.default_provider = "mailtm"
+        mock_load_config.return_value = mock_cfg
+
+        mock_cls = MagicMock()
+        mock_cls.supports_push = True
+        mock_cls.return_value.health_check.return_value = True
+        mock_list_providers.return_value = {"mailtm": mock_cls}
+
+        result = runner.invoke(app, ["providers"])
+        assert result.exit_code == 0
+        assert "mailtm" in result.output
+
+    @patch("tempmail_cli.cli.list_providers")
+    @patch("tempmail_cli.cli.load_config")
+    def test_providers_command_offline(self, mock_load_config, mock_list_providers):
+        mock_cfg = MagicMock()
+        mock_cfg.default_provider = "mailtm"
+        mock_load_config.return_value = mock_cfg
+
+        mock_cls = MagicMock()
+        mock_cls.supports_push = False
+        mock_cls.return_value.health_check.return_value = False
+        mock_list_providers.return_value = {"mailtm": mock_cls}
+
+        result = runner.invoke(app, ["providers"])
+        assert result.exit_code == 0
+        assert "mailtm" in result.output
+
+    @patch("tempmail_cli.cli.list_providers")
+    @patch("tempmail_cli.cli.load_config")
+    def test_providers_json(self, mock_load_config, mock_list_providers):
+        mock_cfg = MagicMock()
+        mock_cfg.default_provider = "mailtm"
+        mock_load_config.return_value = mock_cfg
+
+        mock_cls = MagicMock()
+        mock_cls.supports_push = True
+        mock_cls.return_value.health_check.return_value = True
+        mock_list_providers.return_value = {"mailtm": mock_cls}
+
+        result = runner.invoke(app, ["providers", "--json"])
+        assert result.exit_code == 0
+        assert "mailtm" in result.output

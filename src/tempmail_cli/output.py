@@ -26,7 +26,7 @@ class OutputFormatter:
 
     def __init__(self, json_mode: bool = False, color: bool = True) -> None:
         self._json = json_mode
-        self._console = Console(highlight=False, no_markup=not color)
+        self._console = Console(highlight=False, markup=color)
 
     def print_account_created(self, account: Account, session_path: str) -> None:
         if self._json:
