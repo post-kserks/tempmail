@@ -119,6 +119,13 @@ class MailTmProvider(MailProvider):
         headers = {"Authorization": f"Bearer {account.token}"}
         resp = self._request("GET", "/messages", headers=headers)
         data = resp.json()
+
+        # Handle error responses
+        if isinstance(data, dict) and "code" in data and "message" in data:
+            if data["code"] == 401:
+                raise AuthError("Session expired or account deleted")
+            raise ProviderUnavailableError(f"mail.tm error: {data['message']}")
+
         messages_raw = data.get("hydra:member", data) if isinstance(data, dict) else data
 
         messages: list[Message] = []
