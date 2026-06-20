@@ -217,7 +217,7 @@ class TempMailTUI(App):
                 self._fetch_message(msg.id)
                 break
 
-    @work(exclusive=True)
+    @work(exclusive=True, thread=True)
     def _fetch_message(self, message_id: str) -> None:
         """Fetch full message in background."""
         if not self.account:
@@ -231,7 +231,7 @@ class TempMailTUI(App):
         except TempMailError as e:
             self._update_status(f"Error fetching message: {e}")
 
-    @work(exclusive=True)
+    @work(exclusive=True, thread=True)
     def action_new_mailbox(self) -> None:
         """Create new mailbox."""
         self._update_status("Creating new mailbox...")
@@ -246,7 +246,7 @@ class TempMailTUI(App):
         except TempMailError as e:
             self._update_status(f"Error: {e}")
 
-    @work(exclusive=True)
+    @work(exclusive=True, thread=True)
     def action_watch(self) -> None:
         """Watch for new emails."""
         if not self.account:
