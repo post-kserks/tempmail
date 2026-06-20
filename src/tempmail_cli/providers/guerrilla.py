@@ -111,7 +111,7 @@ class GuerrillaMailProvider(MailProvider):
                     from_address=msg.get("mail_from", ""),
                     from_name=None,
                     subject=msg.get("mail_subject", ""),
-                    received_at=datetime.fromtimestamp(int(msg.get("mail_date", 0)), tz=UTC),
+                    received_at=datetime.now(UTC),
                     text_body=None,
                     html_body=None,
                     seen=msg.get("mail_read", "0") == "1",

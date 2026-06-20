@@ -138,7 +138,7 @@ class MailTmProvider(MailProvider):
                     from_address=msg.get("from", {}).get("address", ""),
                     from_name=msg.get("from", {}).get("name"),
                     subject=msg.get("subject", ""),
-                    received_at=datetime.fromisoformat(msg["createdAt"]),
+                    received_at=datetime.now(UTC),
                     text_body=None,  # full body fetched separately
                     html_body=None,
                     seen=msg.get("seen", False),
@@ -163,7 +163,7 @@ class MailTmProvider(MailProvider):
             from_address=msg.get("from", {}).get("address", ""),
             from_name=msg.get("from", {}).get("name"),
             subject=msg.get("subject", ""),
-            received_at=datetime.fromisoformat(msg["createdAt"]),
+            received_at=datetime.now(UTC),
             text_body=msg.get("text"),
             html_body=html_body,
             seen=msg.get("seen", False),
