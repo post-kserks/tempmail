@@ -231,6 +231,14 @@ def close(
         raise typer.Exit(1)
 
 
+@app.command()
+def tui() -> None:
+    """Launch interactive TUI interface."""
+    from tempmail_cli.tui import main as tui_main
+
+    tui_main()
+
+
 @app.callback(invoke_without_command=True)
 def main(
     version: bool = typer.Option(False, "--version", "-V", help="Show version"),
