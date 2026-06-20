@@ -12,6 +12,7 @@ from textual.widgets import (
     Footer,
     Header,
     Label,
+    RichLog,
 )
 
 from tempmail_cli.clipboard import copy_to_clipboard
@@ -97,8 +98,7 @@ class TempMailTUI(App):
                 yield DataTable(id="inbox-table")
             with Vertical(id="main"):
                 yield Label("📧 Message", id="message-label")
-                with VerticalScroll(id="message-view"):
-                    yield Label("Select a message to read", id="message-content")
+                yield RichLog(id="message-view", highlight=True, markup=True)
         yield Button(self._get_status_text(), id="status-bar", variant="default")
         yield Footer()
 
@@ -166,29 +166,32 @@ class TempMailTUI(App):
 
     def _render_message(self, message: Message, parsed: ParsedContent) -> None:
         """Render message content."""
-        content = self.query_one("#message-content", Label)
+        log = self.query_one("#message-view", RichLog)
+        log.clear()
+
         lines = [
-            f"From: {message.from_address}",
-            f"Subject: {message.subject}",
-            f"Date: {message.received_at.strftime('%Y-%m-%d %H:%M:%S')}",
+            f"[bold]From:[/bold] {message.from_address}",
+            f"[bold]Subject:[/bold] {message.subject}",
+            f"[bold]Date:[/bold] {message.received_at.strftime('%Y-%m-%d %H:%M:%S')}",
             "",
             "─" * 40,
         ]
         if parsed.best_code:
-            lines.append(f"🔑 Code: {parsed.best_code}")
+            lines.append(f"[bold green]🔑 Code:[/bold green] [bold]{parsed.best_code}[/bold]")
             lines.append("")
         if parsed.best_link:
-            lines.append(f"🔗 Link: {parsed.best_link}")
+            lines.append(f"[bold blue]🔗 Link:[/bold blue] {parsed.best_link}")
             lines.append("")
         if len(parsed.codes) > 1:
             other = [c for c in parsed.codes if c != parsed.best_code]
-            lines.append(f"Other codes: {', '.join(other)}")
+            lines.append(f"[dim]Other codes: {', '.join(other)}[/dim]")
             lines.append("")
         lines.append("─" * 40)
         lines.append("")
         body = message.text_body or message.html_body or "(no content)"
         lines.append(body[:2000])
-        content.update("\n".join(lines))
+
+        log.write("\n".join(lines))
 
     @on(DataTable.RowSelected)
     def on_row_selected(self, event: DataTable.RowSelected) -> None:
@@ -285,7 +288,7 @@ class TempMailTUI(App):
             self.account = None
             self.messages = []
             self.query_one("#inbox-table", DataTable).clear()
-            self.query_one("#message-content", Label).update("No message selected")
+            self.query_one("#message-view", RichLog).clear()
             self._update_status("Mailbox closed.")
         except TempMailError as e:
             self._update_status(f"Error: {e}")
