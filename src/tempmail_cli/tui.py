@@ -7,6 +7,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import (
+    Button,
     DataTable,
     Footer,
     Header,
@@ -65,10 +66,7 @@ class TempMailTUI(App):
         padding: 0 1;
         background: $surface;
         border-top: solid $primary;
-    }
-
-    #status-bar.clickable {
-        text-style: underline;
+        width: 100%;
     }
     """
 
@@ -101,7 +99,7 @@ class TempMailTUI(App):
                 yield Label("📧 Message", id="message-label")
                 with VerticalScroll(id="message-view"):
                     yield Label("Select a message to read", id="message-content")
-        yield Label(self._get_status_text(), id="status-bar")
+        yield Button(self._get_status_text(), id="status-bar", variant="default")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -132,10 +130,10 @@ class TempMailTUI(App):
             text = f"📧 {self.account.address}  |  {message}"
         else:
             text = message
-        self.query_one("#status-bar", Label).update(text)
+        self.query_one("#status-bar", Button).label = text
 
-    @on(Label.Clicked, "#status-bar")
-    def on_status_click(self, event: Label.Clicked) -> None:
+    @on(Button.Pressed, "#status-bar")
+    def on_status_click(self, event: Button.Pressed) -> None:
         """Copy email to clipboard when status bar is clicked."""
         if self.account:
             copy_to_clipboard(self.account.address)
