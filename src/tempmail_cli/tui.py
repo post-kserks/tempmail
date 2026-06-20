@@ -12,7 +12,7 @@ from textual.widgets import (
     Footer,
     Header,
     Label,
-    RichLog,
+    Static,
 )
 
 from tempmail_cli.clipboard import copy_to_clipboard
@@ -98,7 +98,7 @@ class TempMailTUI(App):
                 yield DataTable(id="inbox-table")
             with Vertical(id="main"):
                 yield Label("📧 Message", id="message-label")
-                yield RichLog(id="message-view", highlight=True, markup=True)
+                yield Static("Select a message to read", id="message-view", expand=True)
         yield Button(self._get_status_text(), id="status-bar", variant="default")
         yield Footer()
 
@@ -166,8 +166,7 @@ class TempMailTUI(App):
 
     def _render_message(self, message: Message, parsed: ParsedContent) -> None:
         """Render message content."""
-        log = self.query_one("#message-view", RichLog)
-        log.clear()
+        content = self.query_one("#message-view", Static)
 
         lines = [
             f"[bold]From:[/bold] {message.from_address}",
@@ -191,7 +190,7 @@ class TempMailTUI(App):
         body = message.text_body or message.html_body or "(no content)"
         lines.append(body[:2000])
 
-        log.write("\n".join(lines))
+        content.update("\n".join(lines))
 
     @on(DataTable.RowSelected)
     def on_row_selected(self, event: DataTable.RowSelected) -> None:
@@ -288,7 +287,7 @@ class TempMailTUI(App):
             self.account = None
             self.messages = []
             self.query_one("#inbox-table", DataTable).clear()
-            self.query_one("#message-view", RichLog).clear()
+            self.query_one("#message-view", Static).update("Select a message to read")
             self._update_status("Mailbox closed.")
         except TempMailError as e:
             self._update_status(f"Error: {e}")
