@@ -95,7 +95,7 @@ class TempMailTUI(App):
                 yield Label("📧 Message", id="message-label")
                 with VerticalScroll(id="message-view"):
                     yield Label("Select a message to read", id="message-content")
-        yield Label("Press 'n' new | 'w' watch | 'r' refresh | 'q' quit", id="status-bar")
+        yield Label(self._get_status_text(), id="status-bar")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -114,9 +114,19 @@ class TempMailTUI(App):
         except TempMailError:
             self._update_status("No active session. Press 'n' to create one.")
 
+    def _get_status_text(self) -> str:
+        """Get status text with email address."""
+        if self.account:
+            return f"📧 {self.account.address}  |  'n' new | 'w' watch | 'r' refresh | 'q' quit"
+        return "No session  |  Press 'n' to create mailbox  |  'q' quit"
+
     def _update_status(self, message: str) -> None:
         """Update status bar."""
-        self.query_one("#status-bar", Label).update(message)
+        if self.account:
+            text = f"📧 {self.account.address}  |  {message}"
+        else:
+            text = message
+        self.query_one("#status-bar", Label).update(text)
 
     def _refresh_inbox(self) -> None:
         """Refresh inbox messages."""
