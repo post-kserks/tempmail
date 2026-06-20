@@ -58,7 +58,6 @@ class TempMailTUI(App):
 
     #message-view {
         height: 1fr;
-        overflow: auto;
     }
 
     #status-bar {
@@ -110,6 +109,8 @@ class TempMailTUI(App):
         table = self.query_one("#inbox-table", DataTable)
         table.add_columns("From", "Subject", "Date")
         table.cursor_type = "row"
+        # Disable mouse capture to allow native terminal text selection
+        self.screen.capture_mouse = False
         self._load_session()
 
     def _load_session(self) -> None:
