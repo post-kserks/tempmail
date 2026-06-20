@@ -36,34 +36,48 @@ class TempMailUrwid:
 
     def _build_ui(self) -> None:
         """Build the TUI layout."""
-        # Header
-        header = urwid.Text(" TempMail CLI ", align="center")
+        # Header with email address
+        header_text = " TempMail CLI "
+        header = urwid.Text(header_text, align="center")
         header = urwid.AttrMap(header, "header")
 
         # Sidebar - Inbox
         self.inbox_list = urwid.ListBox(urwid.SimpleFocusListWalker([]))
-        inbox_box = urwid.LineBox(self.inbox_list, title="Inbox")
+        inbox_box = urwid.LineBox(self.inbox_list, title="📬 Inbox")
 
         # Main - Message view
-        self.message_text = urwid.Text("Select a message to read")
+        help_text = (
+            "Welcome to TempMail CLI!\n\n"
+            "Quick start:\n"
+            "  1. Press 'n' to create a new mailbox\n"
+            "  2. Press 'w' to watch for emails\n"
+            "  3. Press 'r' to refresh inbox\n\n"
+            "Keyboard shortcuts:\n"
+            "  n - New mailbox\n"
+            "  w - Watch for emails\n"
+            "  r - Refresh inbox\n"
+            "  y - Copy email address\n"
+            "  o - Copy verification code\n"
+            "  m - Copy message\n"
+            "  q - Quit\n\n"
+            "Select a message from inbox to view it here."
+        )
+        self.message_text = urwid.Text(help_text)
         self.message_text = urwid.AttrMap(self.message_text, "body")
-        message_box = urwid.LineBox(self.message_text, title="Message")
+        message_box = urwid.LineBox(self.message_text, title="📧 Message")
 
-        # Status bar
-        self.status_text = urwid.Text(" Press 'n' new | 'w' watch | 'r' refresh | 'q' quit ")
+        # Status bar with email
+        if self.account:
+            status = f" 📧 {self.account.address} | n=new | w=watch | r=refresh | q=quit "
+        else:
+            status = " Press 'n' to create mailbox | q=quit "
+        self.status_text = urwid.Text(status)
         self.status_text = urwid.AttrMap(self.status_text, "status")
 
         # Layout
-        left_column = urwid.Columns([
-            ("weight", 3, inbox_box),
-        ])
-        right_column = urwid.Columns([
-            ("weight", 5, message_box),
-        ])
-
         main_columns = urwid.Columns([
-            ("weight", 3, left_column),
-            ("weight", 5, right_column),
+            ("weight", 3, inbox_box),
+            ("weight", 5, message_box),
         ])
 
         # Main frame
@@ -80,15 +94,15 @@ class TempMailUrwid:
         """Try to load existing session."""
         try:
             self.account = load_session()
-            self._update_status(f"Session loaded: {self.account.address}")
+            self._update_status(f"Loaded: {self.account.address}")
             self._refresh_inbox()
         except TempMailError:
-            self._update_status("No active session. Press 'n' to create one.")
+            self._update_status("No session. Press 'n' to create mailbox.")
 
     def _update_status(self, message: str) -> None:
         """Update status bar."""
         if self.account:
-            text = f" {self.account.address} | {message}"
+            text = f" 📧 {self.account.address} | {message}"
         else:
             text = f" {message}"
         if self.status_text and hasattr(self.status_text, 'original_widget'):
@@ -111,11 +125,21 @@ class TempMailUrwid:
             return
 
         walker = urwid.SimpleFocusListWalker([])
-        for msg in self.messages:
-            date_str = msg.received_at.strftime("%H:%M")
-            text = f"{msg.from_address.split('@')[0]:12} {msg.subject[:25]:25} {date_str}"
-            item = urwid.SelectableIcon(text)
-            walker.append(urwid.AttrMap(item, "inbox_item"))
+
+        if not self.messages:
+            walker.append(urwid.Text(" No messages yet"))
+            walker.append(urwid.Text(""))
+            walker.append(urwid.Text(" Press 'w' to watch"))
+            walker.append(urwid.Text(" for new emails"))
+        else:
+            for msg in self.messages:
+                date_str = msg.received_at.strftime("%H:%M")
+                sender = msg.from_address.split("@")[0][:12]
+                subject = msg.subject[:25]
+                text = f" {sender:12} {subject:25} {date_str}"
+                item = urwid.SelectableIcon(text)
+                walker.append(urwid.AttrMap(item, "inbox_item"))
+
         self.inbox_list.body = walker
         self._update_status(f"Inbox: {len(self.messages)} messages")
 
@@ -266,15 +290,12 @@ class TempMailUrwid:
             ("body", "light gray", "black"),
         ]
 
-        # Create main loop
+        # Create main loop with mouse support
         self.loop = urwid.MainLoop(
             self.main_widget,
             palette=palette,
             unhandled_input=self.keypress,
         )
-
-        # Enable mouse support
-        self.loop.screen.set_mouse_tracking()
 
         self.loop.run()
 
