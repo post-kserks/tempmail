@@ -83,7 +83,7 @@ class TempMailTUI(App):
         self.current_message: Message | None = None
         self.parsed: ParsedContent | None = None
         self.formatter = OutputFormatter(json_mode=False)
-        self._watch_worker = None
+        self._poller: Poller | None = None
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -214,13 +214,12 @@ class TempMailTUI(App):
             self._update_status("No session. Press 'n' to create mailbox.")
             return
 
-        self._watch_worker = self.current_worker
         self._update_status("Watching for new emails... Press Ctrl+C to stop")
 
         try:
             prov = resolve(self.account.provider)
-            poller = Poller(prov, self.account, interval=3.0, timeout=60.0)
-            message = poller.wait_for_message()
+            self._poller = Poller(prov, self.account, interval=3.0, timeout=60.0)
+            message = self._poller.wait_for_message()
             parsed = parse_message(message)
             self.call_from_thread(self._render_message, message, parsed)
             self._update_status(f"New message from: {message.from_address}")
@@ -230,12 +229,12 @@ class TempMailTUI(App):
         except KeyboardInterrupt:
             self._update_status("Watch stopped by user")
         finally:
-            self._watch_worker = None
+            self._poller = None
 
     def action_interrupt(self) -> None:
         """Handle Ctrl+C - stop watch or quit."""
-        if self._watch_worker and self._watch_worker.is_running:
-            self._watch_worker.cancel()
+        if self._poller:
+            self._poller._interrupted = True
             self._update_status("Stopping watch...")
         else:
             self.action_quit()
