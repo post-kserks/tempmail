@@ -95,9 +95,9 @@ class MailTmProvider(MailProvider):
             raise ProviderUnavailableError(f"Failed to create account: {resp.json()}")
         account_data = resp.json()
 
-        # Get token
+        # Get token (mail.tm normalizes address to lowercase)
         token_resp = self._request(
-            "POST", "/token", json={"address": address, "password": password}
+            "POST", "/token", json={"address": address.lower(), "password": password}
         )
         if token_resp.status_code == 401:
             raise AuthError("Failed to authenticate with mail.tm")
