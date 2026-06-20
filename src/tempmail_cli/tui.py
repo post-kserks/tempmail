@@ -91,8 +91,8 @@ class TempMailUrwid:
             text = f" {self.account.address} | {message}"
         else:
             text = f" {message}"
-        if self.status_text:
-            self.status_text.set_text(text)
+        if self.status_text and hasattr(self.status_text, 'original_widget'):
+            self.status_text.original_widget.set_text(text)
 
     def _refresh_inbox(self) -> None:
         """Refresh inbox messages."""
@@ -146,8 +146,8 @@ class TempMailUrwid:
         body = message.text_body or message.html_body or "(no content)"
         lines.append(body[:2000])
 
-        if self.message_text:
-            self.message_text.set_text("\n".join(lines))
+        if self.message_text and hasattr(self.message_text, 'original_widget'):
+            self.message_text.original_widget.set_text("\n".join(lines))
 
     def keypress(self, size: tuple[int, int], key: str) -> str | None:
         """Handle key presses."""
