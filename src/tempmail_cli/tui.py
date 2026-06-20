@@ -1,25 +1,12 @@
-"""TUI interface for TempMail CLI using Textual."""
+"""TUI interface for TempMail CLI using urwid."""
 
 from __future__ import annotations
 
-from textual import on, work
-from textual.app import App, ComposeResult
-from textual.binding import Binding
-from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.widgets import (
-    Button,
-    DataTable,
-    Footer,
-    Header,
-    Label,
-    Static,
-)
+import urwid
 
 from tempmail_cli.clipboard import copy_to_clipboard
-
 from tempmail_cli.exceptions import TempMailError
 from tempmail_cli.models import Account, Message, ParsedContent
-from tempmail_cli.output import OutputFormatter
 from tempmail_cli.parser import parse_message
 from tempmail_cli.poller import Poller
 from tempmail_cli.provider_manager import list_providers, resolve
@@ -30,87 +17,63 @@ from tempmail_cli.session_store import (
 )
 
 
-class TempMailTUI(App):
-    """TempMail TUI Application."""
-
-    TITLE = "TempMail CLI"
-    SUB_TITLE = "Temporary Email Client"
-
-    CSS = """
-    Screen {
-        layout: horizontal;
-    }
-
-    #sidebar {
-        width: 30%;
-        border: solid $primary;
-        padding: 1;
-    }
-
-    #main {
-        width: 70%;
-        padding: 1;
-    }
-
-    #inbox-table {
-        height: 1fr;
-    }
-
-    #message-view {
-        height: 1fr;
-    }
-
-    #status-bar {
-        height: 3;
-        dock: bottom;
-        padding: 0 1;
-        background: $surface;
-        border-top: solid $primary;
-        width: 100%;
-    }
-    """
-
-    BINDINGS = [
-        Binding("q", "quit", "Quit"),
-        Binding("n", "new_mailbox", "New Mailbox"),
-        Binding("w", "watch", "Watch"),
-        Binding("r", "refresh", "Refresh"),
-        Binding("p", "providers", "Providers"),
-        Binding("c", "close_mailbox", "Close"),
-        Binding("ctrl+c", "interrupt", "Stop", show=False),
-        Binding("y", "copy_email", "Copy Email"),
-        Binding("m", "copy_message", "Copy Message"),
-        Binding("o", "copy_code", "Copy Code"),
-    ]
+class TempMailUrwid:
+    """TempMail TUI Application using urwid."""
 
     def __init__(self) -> None:
-        super().__init__()
         self.account: Account | None = None
         self.messages: list[Message] = []
         self.current_message: Message | None = None
         self.parsed: ParsedContent | None = None
-        self.formatter = OutputFormatter(json_mode=False)
-        self._poller: Poller | None = None
 
-    def compose(self) -> ComposeResult:
-        yield Header()
-        with Horizontal():
-            with Vertical(id="sidebar"):
-                yield Label("📬 Inbox", id="inbox-label")
-                yield DataTable(id="inbox-table")
-            with Vertical(id="main"):
-                yield Label("📧 Message", id="message-label")
-                yield Static("Select a message to read", id="message-view", expand=True)
-        yield Button(self._get_status_text(), id="status-bar", variant="default")
-        yield Footer()
+        # Widgets
+        self.inbox_list: urwid.ListBox | None = None
+        self.message_text: urwid.Text | None = None
+        self.status_text: urwid.Text | None = None
 
-    def on_mount(self) -> None:
-        """Initialize on mount."""
-        table = self.query_one("#inbox-table", DataTable)
-        table.add_columns("From", "Subject", "Date")
-        table.cursor_type = "row"
-        # Disable mouse capture to allow native terminal text selection
-        self.screen.capture_mouse = False
+        # Build UI
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        """Build the TUI layout."""
+        # Header
+        header = urwid.Text(" TempMail CLI ", align="center")
+        header = urwid.AttrMap(header, "header")
+
+        # Sidebar - Inbox
+        self.inbox_list = urwid.ListBox(urwid.SimpleFocusListWalker([]))
+        inbox_box = urwid.LineBox(self.inbox_list, title="Inbox")
+
+        # Main - Message view
+        self.message_text = urwid.Text("Select a message to read")
+        self.message_text = urwid.AttrMap(self.message_text, "body")
+        message_box = urwid.LineBox(self.message_text, title="Message")
+
+        # Status bar
+        self.status_text = urwid.Text(" Press 'n' new | 'w' watch | 'r' refresh | 'q' quit ")
+        self.status_text = urwid.AttrMap(self.status_text, "status")
+
+        # Layout
+        left_column = urwid.Columns([
+            ("weight", 3, inbox_box),
+        ])
+        right_column = urwid.Columns([
+            ("weight", 5, message_box),
+        ])
+
+        main_columns = urwid.Columns([
+            ("weight", 3, left_column),
+            ("weight", 5, right_column),
+        ])
+
+        # Main frame
+        self.main_widget = urwid.Frame(
+            body=main_columns,
+            header=header,
+            footer=self.status_text,
+        )
+
+        # Load session
         self._load_session()
 
     def _load_session(self) -> None:
@@ -122,55 +85,14 @@ class TempMailTUI(App):
         except TempMailError:
             self._update_status("No active session. Press 'n' to create one.")
 
-    def _get_status_text(self) -> str:
-        """Get status text with email address."""
-        if self.account:
-            return f"📧 {self.account.address}  |  'y' copy email | 'o' copy code | 'm' copy msg | 'w' watch | 'q' quit"
-        return "No session  |  Press 'n' to create mailbox  |  'q' quit"
-
     def _update_status(self, message: str) -> None:
         """Update status bar."""
         if self.account:
-            text = f"📧 {self.account.address}  |  {message}"
+            text = f" {self.account.address} | {message}"
         else:
-            text = message
-        self.query_one("#status-bar", Button).label = text
-
-    @on(Button.Pressed, "#status-bar")
-    def on_status_click(self, event: Button.Pressed) -> None:
-        """Copy email to clipboard when status bar is clicked."""
-        if self.account:
-            copy_to_clipboard(self.account.address)
-            self._update_status("📋 Email copied to clipboard!")
-
-    def action_copy_email(self) -> None:
-        """Copy email address to clipboard."""
-        if self.account:
-            copy_to_clipboard(self.account.address)
-            self._update_status("📋 Email copied!")
-
-    def action_copy_message(self) -> None:
-        """Copy entire message to clipboard."""
-        if self.current_message:
-            msg = self.current_message
-            lines = [
-                f"From: {msg.from_address}",
-                f"Subject: {msg.subject}",
-                f"Date: {msg.received_at.strftime('%Y-%m-%d %H:%M:%S')}",
-                "",
-                msg.text_body or msg.html_body or "",
-            ]
-            copy_to_clipboard("\n".join(lines))
-            self._update_status("📋 Message copied!")
-
-    def action_copy_code(self) -> None:
-        """Copy verification code to clipboard."""
-        if self.parsed and self.parsed.best_code:
-            copy_to_clipboard(self.parsed.best_code)
-            self._update_status(f"📋 Code {self.parsed.best_code} copied!")
-        elif self.account:
-            copy_to_clipboard(self.account.address)
-            self._update_status("📋 Email copied (no code found)!")
+            text = f" {message}"
+        if self.status_text:
+            self.status_text.set_text(text)
 
     def _refresh_inbox(self) -> None:
         """Refresh inbox messages."""
@@ -184,82 +106,79 @@ class TempMailTUI(App):
             self._update_status(f"Error: {e}")
 
     def _render_inbox(self) -> None:
-        """Render inbox table."""
-        table = self.query_one("#inbox-table", DataTable)
-        table.clear()
+        """Render inbox list."""
+        if not self.inbox_list:
+            return
+
+        walker = urwid.SimpleFocusListWalker([])
         for msg in self.messages:
             date_str = msg.received_at.strftime("%H:%M")
-            table.add_row(
-                msg.from_address.split("@")[0],
-                msg.subject[:30],
-                date_str,
-                key=msg.id,
-            )
+            text = f"{msg.from_address.split('@')[0]:12} {msg.subject[:25]:25} {date_str}"
+            item = urwid.SelectableIcon(text)
+            walker.append(urwid.AttrMap(item, "inbox_item"))
+        self.inbox_list.body = walker
         self._update_status(f"Inbox: {len(self.messages)} messages")
 
     def _render_message(self, message: Message, parsed: ParsedContent) -> None:
         """Render message content."""
         self.current_message = message
         self.parsed = parsed
-        content = self.query_one("#message-view", Static)
 
         lines = [
-            f"[bold]From:[/bold] {message.from_address}",
-            f"[bold]Subject:[/bold] {message.subject}",
-            f"[bold]Date:[/bold] {message.received_at.strftime('%Y-%m-%d %H:%M:%S')}",
+            f"From: {message.from_address}",
+            f"Subject: {message.subject}",
+            f"Date: {message.received_at.strftime('%Y-%m-%d %H:%M:%S')}",
             "",
             "─" * 40,
         ]
         if parsed.best_code:
-            lines.append(f"[bold green]🔑 Code:[/bold green] [bold]{parsed.best_code}[/bold]")
+            lines.append(f"🔑 Code: {parsed.best_code}")
             lines.append("")
         if parsed.best_link:
-            lines.append(f"[bold blue]🔗 Link:[/bold blue] {parsed.best_link}")
+            lines.append(f"🔗 Link: {parsed.best_link}")
             lines.append("")
         if len(parsed.codes) > 1:
             other = [c for c in parsed.codes if c != parsed.best_code]
-            lines.append(f"[dim]Other codes: {', '.join(other)}[/dim]")
+            lines.append(f"Other codes: {', '.join(other)}")
             lines.append("")
         lines.append("─" * 40)
         lines.append("")
         body = message.text_body or message.html_body or "(no content)"
         lines.append(body[:2000])
 
-        content.update("\n".join(lines))
+        if self.message_text:
+            self.message_text.set_text("\n".join(lines))
 
-    @on(DataTable.RowSelected)
-    def on_row_selected(self, event: DataTable.RowSelected) -> None:
-        """Handle row selection in inbox."""
-        if event.row_key is None:
-            return
-        msg_id = str(event.row_key.value)
-        for msg in self.messages:
-            if msg.id == msg_id:
-                self.current_message = msg
-                self._fetch_message(msg.id)
-                break
+    def keypress(self, size: tuple[int, int], key: str) -> str | None:
+        """Handle key presses."""
+        if key == "q":
+            raise urwid.ExitMainLoop()
+        elif key == "n":
+            self._create_mailbox()
+        elif key == "w":
+            self._watch()
+        elif key == "r":
+            self._refresh_inbox()
+        elif key == "y":
+            self._copy_email()
+        elif key == "o":
+            self._copy_code()
+        elif key == "m":
+            self._copy_message()
+        elif key == "enter":
+            self._open_selected_message()
+        elif key == "up":
+            if self.inbox_list:
+                self.inbox_list.focus_position = max(0, self.inbox_list.focus_position - 1)
+        elif key == "down":
+            if self.inbox_list:
+                self.inbox_list.focus_position = min(
+                    len(self.inbox_list.body) - 1,
+                    self.inbox_list.focus_position + 1
+                )
+        return key
 
-    @work(exclusive=True, thread=True)
-    def _fetch_message(self, message_id: str) -> None:
-        """Fetch full message in background."""
-        if not self.account:
-            return
-        try:
-            prov = resolve(self.account.provider)
-            full_msg = prov.get_message(self.account, message_id)
-            parsed = parse_message(full_msg)
-            self.call_from_thread(self._set_message_data, full_msg, parsed)
-        except TempMailError as e:
-            self._update_status(f"Error fetching message: {e}")
-
-    def _set_message_data(self, message: Message, parsed: ParsedContent) -> None:
-        """Set message data and render."""
-        self.current_message = message
-        self.parsed = parsed
-        self._render_message(message, parsed)
-
-    @work(exclusive=True, thread=True)
-    def action_new_mailbox(self) -> None:
+    def _create_mailbox(self) -> None:
         """Create new mailbox."""
         self._update_status("Creating new mailbox...")
         try:
@@ -271,72 +190,99 @@ class TempMailTUI(App):
         except TempMailError as e:
             self._update_status(f"Error: {e}")
 
-    @work(exclusive=True, thread=True)
-    def action_watch(self) -> None:
+    def _watch(self) -> None:
         """Watch for new emails."""
         if not self.account:
             self._update_status("No session. Press 'n' to create mailbox.")
             return
 
-        self._update_status("Watching for new emails... Press Ctrl+C to stop")
+        self._update_status("Watching for new emails... (60s timeout)")
 
         try:
             prov = resolve(self.account.provider)
-            self._poller = Poller(prov, self.account, interval=3.0, timeout=60.0)
-            message = self._poller.wait_for_message()
+            poller = Poller(prov, self.account, interval=3.0, timeout=60.0)
+            message = poller.wait_for_message()
             parsed = parse_message(message)
-            self.call_from_thread(self._render_message, message, parsed)
+            self._render_message(message, parsed)
             self._update_status(f"New message from: {message.from_address}")
             self._refresh_inbox()
         except TempMailError as e:
             self._update_status(f"Watch stopped: {e}")
         except KeyboardInterrupt:
             self._update_status("Watch stopped by user")
-        finally:
-            self._poller = None
 
-    def action_interrupt(self) -> None:
-        """Handle Ctrl+C - stop watch or quit."""
-        if self._poller:
-            self._poller._interrupted = True
-            self._update_status("Stopping watch...")
-        else:
-            self.action_quit()
-
-    def action_refresh(self) -> None:
-        """Refresh inbox."""
-        self._refresh_inbox()
-
-    def action_providers(self) -> None:
-        """Show providers."""
-        providers = list_providers()
-        lines = ["Available providers:"]
-        for name, cls in providers.items():
-            online = "✓" if cls().health_check() else "✗"
-            lines.append(f"  {online} {name}")
-        self._update_status(" | ".join(lines))
-
-    def action_close_mailbox(self) -> None:
-        """Close current mailbox."""
-        if not self.account:
-            self._update_status("No active session.")
+    def _open_selected_message(self) -> None:
+        """Open selected message from inbox."""
+        if not self.inbox_list or not self.messages:
             return
-        try:
-            prov = resolve(self.account.provider)
-            prov.delete_account(self.account)
-            delete_session()
-            self.account = None
-            self.messages = []
-            self.query_one("#inbox-table", DataTable).clear()
-            self.query_one("#message-view", Static).update("Select a message to read")
-            self._update_status("Mailbox closed.")
-        except TempMailError as e:
-            self._update_status(f"Error: {e}")
+
+        idx = self.inbox_list.focus_position
+        if idx < len(self.messages):
+            msg = self.messages[idx]
+            try:
+                prov = resolve(self.account.provider)
+                full_msg = prov.get_message(self.account, msg.id)
+                parsed = parse_message(full_msg)
+                self._render_message(full_msg, parsed)
+            except TempMailError as e:
+                self._update_status(f"Error: {e}")
+
+    def _copy_email(self) -> None:
+        """Copy email address to clipboard."""
+        if self.account:
+            copy_to_clipboard(self.account.address)
+            self._update_status("📋 Email copied!")
+
+    def _copy_code(self) -> None:
+        """Copy verification code to clipboard."""
+        if self.parsed and self.parsed.best_code:
+            copy_to_clipboard(self.parsed.best_code)
+            self._update_status(f"📋 Code {self.parsed.best_code} copied!")
+        elif self.account:
+            copy_to_clipboard(self.account.address)
+            self._update_status("📋 Email copied (no code)!")
+
+    def _copy_message(self) -> None:
+        """Copy entire message to clipboard."""
+        if self.current_message:
+            msg = self.current_message
+            lines = [
+                f"From: {msg.from_address}",
+                f"Subject: {msg.subject}",
+                f"Date: {msg.received_at.strftime('%Y-%m-%d %H:%M:%S')}",
+                "",
+                msg.text_body or "",
+            ]
+            copy_to_clipboard("\n".join(lines))
+            self._update_status("📋 Message copied!")
+
+    def run(self) -> None:
+        """Run the TUI application."""
+        # Define palette
+        palette = [
+            ("header", "white", "dark blue"),
+            ("status", "white", "dark green"),
+            ("inbox_item", "light gray", "black"),
+            ("inbox_item_focus", "white", "dark blue"),
+            ("body", "light gray", "black"),
+        ]
+
+        # Create main loop
+        self.loop = urwid.MainLoop(
+            self.main_widget,
+            palette=palette,
+            unhandled_input=self.keypress,
+        )
+
+        # Enable mouse support
+        self.loop.screen.set_mouse_tracking()
+
+        self.loop.run()
 
 
 def main() -> None:
     """Run the TUI application."""
-    app = TempMailTUI()
+    app = TempMailUrwid()
     app.run()
 
 
