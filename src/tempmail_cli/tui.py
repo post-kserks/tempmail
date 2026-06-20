@@ -11,9 +11,6 @@ from textual.widgets import (
     Footer,
     Header,
     Label,
-    LoadingIndicator,
-    RichLog,
-    Static,
 )
 
 from tempmail_cli.exceptions import TempMailError
@@ -21,12 +18,11 @@ from tempmail_cli.models import Account, Message, ParsedContent
 from tempmail_cli.output import OutputFormatter
 from tempmail_cli.parser import parse_message
 from tempmail_cli.poller import Poller
-from tempmail_cli.provider_manager import create_provider, list_providers, resolve
+from tempmail_cli.provider_manager import list_providers, resolve
 from tempmail_cli.session_store import (
     delete_session,
     load_session,
     save_session,
-    session_exists,
 )
 
 
@@ -68,27 +64,6 @@ class TempMailTUI(App):
         background: $surface;
         border-top: solid $primary;
     }
-
-    .email-header {
-        padding: 1;
-        background: $surface;
-        margin: 0 0 1 0;
-    }
-
-    .email-code {
-        padding: 1;
-        background: $success;
-        color: $text;
-        margin: 1 0;
-        text-align: center;
-    }
-
-    .email-link {
-        padding: 1;
-        background: $primary;
-        color: $text;
-        margin: 1 0;
-    }
     """
 
     BINDINGS = [
@@ -98,6 +73,7 @@ class TempMailTUI(App):
         Binding("r", "refresh", "Refresh"),
         Binding("p", "providers", "Providers"),
         Binding("c", "close_mailbox", "Close"),
+        Binding("ctrl+c", "interrupt", "Stop", show=False),
     ]
 
     def __init__(self) -> None:
@@ -107,6 +83,7 @@ class TempMailTUI(App):
         self.current_message: Message | None = None
         self.parsed: ParsedContent | None = None
         self.formatter = OutputFormatter(json_mode=False)
+        self._watch_worker = None
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -118,7 +95,7 @@ class TempMailTUI(App):
                 yield Label("📧 Message", id="message-label")
                 with VerticalScroll(id="message-view"):
                     yield Label("Select a message to read", id="message-content")
-        yield Label("Press 'n' new mailbox | 'w' watch | 'r' refresh | 'q' quit", id="status-bar")
+        yield Label("Press 'n' new | 'w' watch | 'r' refresh | 'q' quit", id="status-bar")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -126,7 +103,6 @@ class TempMailTUI(App):
         table = self.query_one("#inbox-table", DataTable)
         table.add_columns("From", "Subject", "Date")
         table.cursor_type = "row"
-
         self._load_session()
 
     def _load_session(self) -> None:
@@ -146,7 +122,6 @@ class TempMailTUI(App):
         """Refresh inbox messages."""
         if not self.account:
             return
-
         try:
             prov = resolve(self.account.provider)
             self.messages = prov.list_messages(self.account)
@@ -158,7 +133,6 @@ class TempMailTUI(App):
         """Render inbox table."""
         table = self.query_one("#inbox-table", DataTable)
         table.clear()
-
         for msg in self.messages:
             date_str = msg.received_at.strftime("%H:%M")
             table.add_row(
@@ -167,13 +141,11 @@ class TempMailTUI(App):
                 date_str,
                 key=msg.id,
             )
-
         self._update_status(f"Inbox: {len(self.messages)} messages")
 
     def _render_message(self, message: Message, parsed: ParsedContent) -> None:
         """Render message content."""
         content = self.query_one("#message-content", Label)
-
         lines = [
             f"From: {message.from_address}",
             f"Subject: {message.subject}",
@@ -181,26 +153,20 @@ class TempMailTUI(App):
             "",
             "─" * 40,
         ]
-
         if parsed.best_code:
             lines.append(f"🔑 Code: {parsed.best_code}")
             lines.append("")
-
         if parsed.best_link:
             lines.append(f"🔗 Link: {parsed.best_link}")
             lines.append("")
-
         if len(parsed.codes) > 1:
             other = [c for c in parsed.codes if c != parsed.best_code]
             lines.append(f"Other codes: {', '.join(other)}")
             lines.append("")
-
         lines.append("─" * 40)
         lines.append("")
-
         body = message.text_body or message.html_body or "(no content)"
         lines.append(body[:2000])
-
         content.update("\n".join(lines))
 
     @on(DataTable.RowSelected)
@@ -208,12 +174,10 @@ class TempMailTUI(App):
         """Handle row selection in inbox."""
         if event.row_key is None:
             return
-
         msg_id = str(event.row_key.value)
         for msg in self.messages:
             if msg.id == msg_id:
                 self.current_message = msg
-                # Fetch full message
                 self._fetch_message(msg.id)
                 break
 
@@ -222,7 +186,6 @@ class TempMailTUI(App):
         """Fetch full message in background."""
         if not self.account:
             return
-
         try:
             prov = resolve(self.account.provider)
             full_msg = prov.get_message(self.account, message_id)
@@ -235,9 +198,7 @@ class TempMailTUI(App):
     def action_new_mailbox(self) -> None:
         """Create new mailbox."""
         self._update_status("Creating new mailbox...")
-
         try:
-            # Use default provider
             prov = resolve()
             self.account = prov.create_account()
             save_session(self.account)
@@ -253,23 +214,31 @@ class TempMailTUI(App):
             self._update_status("No session. Press 'n' to create mailbox.")
             return
 
-        self._update_status("Watching for new emails... (Ctrl+C to stop)")
+        self._watch_worker = self.current_worker
+        self._update_status("Watching for new emails... Press Ctrl+C to stop")
 
         try:
             prov = resolve(self.account.provider)
             poller = Poller(prov, self.account, interval=3.0, timeout=60.0)
             message = poller.wait_for_message()
             parsed = parse_message(message)
-
             self.call_from_thread(self._render_message, message, parsed)
             self._update_status(f"New message from: {message.from_address}")
-
-            # Refresh inbox
             self._refresh_inbox()
         except TempMailError as e:
             self._update_status(f"Watch stopped: {e}")
         except KeyboardInterrupt:
             self._update_status("Watch stopped by user")
+        finally:
+            self._watch_worker = None
+
+    def action_interrupt(self) -> None:
+        """Handle Ctrl+C - stop watch or quit."""
+        if self._watch_worker and self._watch_worker.is_running:
+            self._watch_worker.cancel()
+            self._update_status("Stopping watch...")
+        else:
+            self.action_quit()
 
     def action_refresh(self) -> None:
         """Refresh inbox."""
@@ -289,7 +258,6 @@ class TempMailTUI(App):
         if not self.account:
             self._update_status("No active session.")
             return
-
         try:
             prov = resolve(self.account.provider)
             prov.delete_account(self.account)
