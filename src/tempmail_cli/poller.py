@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import signal
+import threading
 import time
 
 from tempmail_cli.exceptions import TimeoutWaitingForMailError
@@ -29,8 +30,10 @@ class Poller:
         self._timeout = timeout
         self._interrupted = False
 
-        signal.signal(signal.SIGINT, self._handle_interrupt)
-        signal.signal(signal.SIGTERM, self._handle_interrupt)
+        # Only set signal handlers in main thread
+        if threading.current_thread() is threading.main_thread():
+            signal.signal(signal.SIGINT, self._handle_interrupt)
+            signal.signal(signal.SIGTERM, self._handle_interrupt)
 
     def _handle_interrupt(self, signum: int, frame: object) -> None:
         self._interrupted = True
