@@ -1,11 +1,10 @@
 """Tests for the message parser."""
 
-import pytest
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, timezone
 
-from tempmail_cli.models import Message, ParsedContent
-from tempmail_cli.parser import parse_message, _find_codes, _score_link
+from tempmail_cli.models import Message
+from tempmail_cli.parser import _score_link, parse_message
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 
@@ -16,7 +15,7 @@ def _make_message(text: str | None = None, html: str | None = None) -> Message:
         from_address="test@example.com",
         from_name="Test Sender",
         subject="Test Subject",
-        received_at=datetime.now(timezone.utc),
+        received_at=datetime.now(UTC),
         text_body=text,
         html_body=html,
         seen=False,

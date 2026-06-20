@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import secrets
-from datetime import datetime, timezone
-from typing import ClassVar
+from datetime import UTC, datetime
+from typing import Any, ClassVar, cast
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -32,7 +32,9 @@ class GuerrillaMailProvider(MailProvider):
 
     name: ClassVar[str] = "guerrilla"
 
-    def __init__(self, base_url: str = "https://api.guerrillamail.com/ajax.php", rps: float = 0.5) -> None:
+    def __init__(
+        self, base_url: str = "https://api.guerrillamail.com/ajax.php", rps: float = 0.5
+    ) -> None:
         self._base_url = base_url
         self._limiter = RateLimiter(rps)
         self._session = self._build_session()
@@ -46,7 +48,7 @@ class GuerrillaMailProvider(MailProvider):
         session.mount("http://", adapter)
         return session
 
-    def _request(self, **params: str) -> dict:
+    def _request(self, **params: str) -> dict[str, Any]:
         self._limiter.wait()
         try:
             resp = self._session.get(self._base_url, params=params, timeout=10)
@@ -68,7 +70,7 @@ class GuerrillaMailProvider(MailProvider):
                 f"Guerrilla Mail server error: {resp.status_code}",
                 hint="Try again later or use --provider mailtm",
             )
-        return resp.json()
+        return cast(dict[str, Any], resp.json())
 
     def list_domains(self) -> list[str]:
         return list(GUERRILLA_DOMAINS)
@@ -89,7 +91,7 @@ class GuerrillaMailProvider(MailProvider):
             password="",  # Guerrilla Mail doesn't use passwords
             provider="guerrilla",
             token=sid_token,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
             raw=data,
         )
 
@@ -109,7 +111,7 @@ class GuerrillaMailProvider(MailProvider):
                     from_address=msg.get("mail_from", ""),
                     from_name=None,
                     subject=msg.get("mail_subject", ""),
-                    received_at=datetime.fromtimestamp(msg.get("mail_date", 0), tz=timezone.utc),
+                    received_at=datetime.fromtimestamp(msg.get("mail_date", 0), tz=UTC),
                     text_body=None,
                     html_body=None,
                     seen=msg.get("mail_read", "0") == "1",
@@ -136,7 +138,7 @@ class GuerrillaMailProvider(MailProvider):
             from_address=sender,
             from_name=None,
             subject=subject,
-            received_at=datetime.now(timezone.utc),
+            received_at=datetime.now(UTC),
             text_body=text or None,
             html_body=msg or None,
             seen=False,

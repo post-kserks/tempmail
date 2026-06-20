@@ -1,13 +1,11 @@
 """Tests for configuration loading."""
 
-import os
-import tempfile
 from pathlib import Path
 
 import pytest
 import yaml
 
-from tempmail_cli.config import Config, DefaultsConfig, ProviderConfig, load_config
+from tempmail_cli.config import load_config
 from tempmail_cli.exceptions import ConfigError
 
 

@@ -9,7 +9,10 @@ from bs4 import BeautifulSoup
 from tempmail_cli.models import Message, ParsedContent
 
 CODE_PATTERNS = [
-    re.compile(r"(?:код|code|verification code|otp|pin)[\s:\u2013-]{0,5}([A-Za-z0-9]{4,10})", re.IGNORECASE),
+    re.compile(
+        r"(?:код|code|verification code|otp|pin)[\s:\u2013-]{0,5}([A-Za-z0-9]{4,10})",
+        re.IGNORECASE,
+    ),
     re.compile(r"\b(\d{6})\b"),
     re.compile(r"\b(\d{4})\b"),
     re.compile(r"\b([A-Z0-9]{6,10})\b"),
@@ -27,7 +30,7 @@ def _extract_links_from_html(html: str) -> list[str]:
     soup = BeautifulSoup(html, "html.parser")
     links: list[str] = []
     for a_tag in soup.find_all("a", href=True):
-        href = a_tag["href"]
+        href = str(a_tag["href"])
         if href.startswith(("http://", "https://")):
             links.append(href)
     return links

@@ -1,8 +1,7 @@
 """Tests for output formatting."""
 
 import json
-from datetime import datetime, timezone
-from io import StringIO
+from datetime import UTC, datetime
 
 import pytest
 
@@ -17,7 +16,7 @@ def account():
         password="secret",
         provider="mailtm",
         token="tok",
-        created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        created_at=datetime(2026, 1, 1, tzinfo=UTC),
         raw={},
     )
 
@@ -29,7 +28,7 @@ def message():
         from_address="sender@example.com",
         from_name="Sender",
         subject="Your code is 123456",
-        received_at=datetime(2026, 6, 21, 12, 0, 0, tzinfo=timezone.utc),
+        received_at=datetime(2026, 6, 21, 12, 0, 0, tzinfo=UTC),
         text_body="Your code: 123456",
         html_body=None,
         seen=False,

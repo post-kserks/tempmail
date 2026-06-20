@@ -1,10 +1,11 @@
 """Tests for provider manager."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from tempmail_cli.provider_manager import resolve, create_provider, list_providers
+import pytest
+
 from tempmail_cli.exceptions import ProviderUnavailableError
+from tempmail_cli.provider_manager import create_provider, list_providers, resolve
 
 
 class TestProviderManager:

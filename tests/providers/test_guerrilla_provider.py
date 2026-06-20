@@ -1,11 +1,12 @@
 """Tests for Guerrilla Mail provider with mocked HTTP."""
 
+from datetime import UTC, datetime
+
 import pytest
 import responses
 
-from tempmail_cli.providers.guerrilla import GuerrillaMailProvider, GUERRILLA_DOMAINS
 from tempmail_cli.models import Account
-from datetime import datetime, timezone
+from tempmail_cli.providers.guerrilla import GuerrillaMailProvider
 
 
 @pytest.fixture
@@ -60,7 +61,7 @@ class TestGuerrillaMailProvider:
             password="",
             provider="guerrilla",
             token="fake-sid",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         messages = provider.list_messages(account)
         assert len(messages) == 1

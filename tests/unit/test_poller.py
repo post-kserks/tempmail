@@ -1,14 +1,13 @@
 """Tests for the poller."""
 
-import time
-import pytest
-from datetime import datetime, timezone
-from unittest.mock import MagicMock
+from datetime import UTC, datetime
 
+import pytest
+
+from tempmail_cli.exceptions import TimeoutWaitingForMailError
 from tempmail_cli.models import Account, Message
 from tempmail_cli.poller import Poller
 from tempmail_cli.providers.base import MailProvider
-from tempmail_cli.exceptions import TimeoutWaitingForMailError
 
 
 class FakeProvider(MailProvider):
@@ -27,7 +26,7 @@ class FakeProvider(MailProvider):
             password="pass",
             provider="fake",
             token=None,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
 
     def list_messages(self, account, since_id=None) -> list[Message]:
@@ -45,7 +44,7 @@ class FakeProvider(MailProvider):
             from_address="test@example.com",
             from_name=None,
             subject="Test",
-            received_at=datetime.now(timezone.utc),
+            received_at=datetime.now(UTC),
             text_body="test",
             html_body=None,
             seen=False,
@@ -61,7 +60,7 @@ def _make_account() -> Account:
         password="pass",
         provider="fake",
         token=None,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
 
@@ -76,7 +75,7 @@ def _make_message(subject: str = "Test", from_addr: str = "test@example.com") ->
         from_address=from_addr,
         from_name=None,
         subject=subject,
-        received_at=datetime.now(timezone.utc),
+        received_at=datetime.now(UTC),
         text_body="test body",
         html_body=None,
         seen=False,

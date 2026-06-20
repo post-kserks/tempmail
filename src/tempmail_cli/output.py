@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
 from datetime import datetime
 from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
 from tempmail_cli.models import Account, Message, ParsedContent
 
@@ -69,7 +67,7 @@ class OutputFormatter:
                 other = [c for c in parsed.codes if c != parsed.best_code]
                 lines.append(f"Другие найденные коды: {', '.join(other)}")
             if len(parsed.links) > 1:
-                other_links = [l for l in parsed.links if l != parsed.best_link]
+                other_links = [lnk for lnk in parsed.links if lnk != parsed.best_link]
                 lines.append(f"Другие ссылки ({len(other_links)}): {', '.join(other_links[:3])}")
 
             content = "\n".join(lines)

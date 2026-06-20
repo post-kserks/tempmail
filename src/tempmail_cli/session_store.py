@@ -6,14 +6,14 @@ import json
 import os
 import stat
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from platformdirs import user_state_dir
 
 from tempmail_cli.exceptions import InvalidSessionError
 from tempmail_cli.models import Account
-
 
 _DEFAULT_DIR = Path(user_state_dir("tempmail-cli"))
 _DEFAULT_FILE = _DEFAULT_DIR / "session.json"
@@ -25,13 +25,13 @@ def _session_path(name: str = "default") -> Path:
     return _DEFAULT_DIR / f"session_{name}.json"
 
 
-def _serialize_account(account: Account) -> dict:
+def _serialize_account(account: Account) -> dict[str, Any]:
     data = asdict(account)
     data["created_at"] = account.created_at.isoformat()
     return data
 
 
-def _deserialize_account(data: dict) -> Account:
+def _deserialize_account(data: dict[str, Any]) -> Account:
     return Account(
         address=data["address"],
         password=data["password"],

@@ -1,7 +1,8 @@
 """Shared test fixtures."""
 
+from datetime import UTC, datetime
+
 import pytest
-from datetime import datetime, timezone
 
 from tempmail_cli.models import Account
 
@@ -13,6 +14,6 @@ def sample_account() -> Account:
         password="secret123",
         provider="mailtm",
         token="fake-jwt-token",
-        created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        created_at=datetime(2026, 1, 1, tzinfo=UTC),
         raw={"id": "acc-123"},
     )

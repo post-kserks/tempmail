@@ -1,7 +1,8 @@
 """Data models for TempMail CLI."""
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -11,7 +12,7 @@ class Account:
     provider: str
     token: str | None
     created_at: datetime
-    raw: dict = field(default_factory=dict)
+    raw: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

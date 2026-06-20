@@ -1,12 +1,13 @@
 """Tests for session store."""
 
 import os
-import pytest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from tempmail_cli.models import Account
-from tempmail_cli.session_store import save_session, load_session, delete_session, session_exists
+import pytest
+
 from tempmail_cli.exceptions import InvalidSessionError
+from tempmail_cli.models import Account
+from tempmail_cli.session_store import delete_session, load_session, save_session, session_exists
 
 
 @pytest.fixture
@@ -21,7 +22,7 @@ def _make_account(address: str = "test@example.com") -> Account:
         password="pass",
         provider="mailtm",
         token="tok",
-        created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        created_at=datetime(2026, 1, 1, tzinfo=UTC),
     )
 
 

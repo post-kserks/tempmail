@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import logging
 
+from tempmail_cli.config import load_config
 from tempmail_cli.exceptions import ProviderUnavailableError
 from tempmail_cli.providers.base import MailProvider
-from tempmail_cli.providers.mailtm import MailTmProvider
 from tempmail_cli.providers.guerrilla import GuerrillaMailProvider
-from tempmail_cli.config import load_config
+from tempmail_cli.providers.mailtm import MailTmProvider
 
 logger = logging.getLogger(__name__)
 

@@ -1,15 +1,15 @@
 """Tests for Mail.tm provider with mocked HTTP."""
 
 import json
-import pytest
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, timezone
 
+import pytest
 import responses
 
-from tempmail_cli.providers.mailtm import MailTmProvider
-from tempmail_cli.exceptions import ProviderUnavailableError, RateLimitedError
+from tempmail_cli.exceptions import RateLimitedError
 from tempmail_cli.models import Account
+from tempmail_cli.providers.mailtm import MailTmProvider
 
 FIXTURES = Path(__file__).parent.parent / "fixtures"
 
@@ -31,7 +31,7 @@ def sample_account():
         password="pass",
         provider="mailtm",
         token="fake-token",
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
 
