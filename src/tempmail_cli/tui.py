@@ -149,7 +149,7 @@ class TempMailUrwid:
         if self.message_text and hasattr(self.message_text, 'original_widget'):
             self.message_text.original_widget.set_text("\n".join(lines))
 
-    def keypress(self, size: tuple[int, int], key: str) -> str | None:
+    def keypress(self, key: str) -> None:
         """Handle key presses."""
         if key == "q":
             raise urwid.ExitMainLoop()
@@ -176,7 +176,6 @@ class TempMailUrwid:
                     len(self.inbox_list.body) - 1,
                     self.inbox_list.focus_position + 1
                 )
-        return key
 
     def _create_mailbox(self) -> None:
         """Create new mailbox."""
