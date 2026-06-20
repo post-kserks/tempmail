@@ -152,6 +152,12 @@ class MailTmProvider(MailProvider):
         if resp.status_code == 404:
             raise MessageNotFoundError(f"Message {message_id} not found")
         msg = resp.json()
+
+        # Handle html_body - mail.tm may return list or string
+        html_body = msg.get("html")
+        if isinstance(html_body, list):
+            html_body = "\n".join(html_body)
+
         return Message(
             id=msg["id"],
             from_address=msg.get("from", {}).get("address", ""),
@@ -159,7 +165,7 @@ class MailTmProvider(MailProvider):
             subject=msg.get("subject", ""),
             received_at=datetime.fromisoformat(msg["createdAt"]),
             text_body=msg.get("text"),
-            html_body=msg.get("html"),
+            html_body=html_body,
             seen=msg.get("seen", False),
         )
 
