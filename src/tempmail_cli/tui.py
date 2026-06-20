@@ -13,6 +13,8 @@ from textual.widgets import (
     Label,
 )
 
+from tempmail_cli.clipboard import copy_to_clipboard
+
 from tempmail_cli.exceptions import TempMailError
 from tempmail_cli.models import Account, Message, ParsedContent
 from tempmail_cli.output import OutputFormatter
@@ -63,6 +65,10 @@ class TempMailTUI(App):
         padding: 0 1;
         background: $surface;
         border-top: solid $primary;
+    }
+
+    #status-bar.clickable {
+        text-style: underline;
     }
     """
 
@@ -127,6 +133,13 @@ class TempMailTUI(App):
         else:
             text = message
         self.query_one("#status-bar", Label).update(text)
+
+    @on(Label.Clicked, "#status-bar")
+    def on_status_click(self, event: Label.Clicked) -> None:
+        """Copy email to clipboard when status bar is clicked."""
+        if self.account:
+            copy_to_clipboard(self.account.address)
+            self._update_status("📋 Email copied to clipboard!")
 
     def _refresh_inbox(self) -> None:
         """Refresh inbox messages."""
