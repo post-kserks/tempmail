@@ -164,7 +164,7 @@ class TempMailTUI(App):
         self._update_status(f"Inbox: {len(self.messages)} messages")
 
     def _render_message(self, message: Message, parsed: ParsedContent) -> None:
-        """Render message content in TextArea for text selection."""
+        """Render full message content in TextArea for text selection."""
         self.current_message = message
         self.parsed = parsed
 
@@ -202,8 +202,25 @@ class TempMailTUI(App):
         for msg in self.messages:
             if msg.id == msg_id:
                 self.current_message = msg
+                # Show basic info immediately
+                self._show_message_preview(msg)
+                # Fetch full message in background
                 self._fetch_message(msg.id)
                 break
+
+    def _show_message_preview(self, message: Message) -> None:
+        """Show message preview immediately without network request."""
+        lines = [
+            f"From: {message.from_address}",
+            f"Subject: {message.subject}",
+            f"Date: {message.received_at.strftime('%Y-%m-%d %H:%M:%S')}",
+            "",
+            "─" * 40,
+            "",
+            "Loading full message...",
+        ]
+        text_area = self.query_one("#message-view", TextArea)
+        text_area.load_text("\n".join(lines))
 
     @work(exclusive=True, thread=True)
     def _fetch_message(self, message_id: str) -> None:
