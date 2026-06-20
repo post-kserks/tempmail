@@ -79,6 +79,9 @@ class TempMailTUI(App):
         Binding("p", "providers", "Providers"),
         Binding("c", "close_mailbox", "Close"),
         Binding("ctrl+c", "interrupt", "Stop", show=False),
+        Binding("y", "copy_email", "Copy Email"),
+        Binding("m", "copy_message", "Copy Message"),
+        Binding("o", "copy_code", "Copy Code"),
     ]
 
     def __init__(self) -> None:
@@ -121,7 +124,7 @@ class TempMailTUI(App):
     def _get_status_text(self) -> str:
         """Get status text with email address."""
         if self.account:
-            return f"📧 {self.account.address}  |  'n' new | 'w' watch | 'r' refresh | 'q' quit"
+            return f"📧 {self.account.address}  |  'y' copy email | 'o' copy code | 'm' copy msg | 'w' watch | 'q' quit"
         return "No session  |  Press 'n' to create mailbox  |  'q' quit"
 
     def _update_status(self, message: str) -> None:
@@ -138,6 +141,35 @@ class TempMailTUI(App):
         if self.account:
             copy_to_clipboard(self.account.address)
             self._update_status("📋 Email copied to clipboard!")
+
+    def action_copy_email(self) -> None:
+        """Copy email address to clipboard."""
+        if self.account:
+            copy_to_clipboard(self.account.address)
+            self._update_status("📋 Email copied!")
+
+    def action_copy_message(self) -> None:
+        """Copy entire message to clipboard."""
+        if self.current_message:
+            msg = self.current_message
+            lines = [
+                f"From: {msg.from_address}",
+                f"Subject: {msg.subject}",
+                f"Date: {msg.received_at.strftime('%Y-%m-%d %H:%M:%S')}",
+                "",
+                msg.text_body or msg.html_body or "",
+            ]
+            copy_to_clipboard("\n".join(lines))
+            self._update_status("📋 Message copied!")
+
+    def action_copy_code(self) -> None:
+        """Copy verification code to clipboard."""
+        if self.parsed and self.parsed.best_code:
+            copy_to_clipboard(self.parsed.best_code)
+            self._update_status(f"📋 Code {self.parsed.best_code} copied!")
+        elif self.account:
+            copy_to_clipboard(self.account.address)
+            self._update_status("📋 Email copied (no code found)!")
 
     def _refresh_inbox(self) -> None:
         """Refresh inbox messages."""
@@ -166,6 +198,8 @@ class TempMailTUI(App):
 
     def _render_message(self, message: Message, parsed: ParsedContent) -> None:
         """Render message content."""
+        self.current_message = message
+        self.parsed = parsed
         content = self.query_one("#message-view", Static)
 
         lines = [
@@ -213,9 +247,15 @@ class TempMailTUI(App):
             prov = resolve(self.account.provider)
             full_msg = prov.get_message(self.account, message_id)
             parsed = parse_message(full_msg)
-            self.call_from_thread(self._render_message, full_msg, parsed)
+            self.call_from_thread(self._set_message_data, full_msg, parsed)
         except TempMailError as e:
             self._update_status(f"Error fetching message: {e}")
+
+    def _set_message_data(self, message: Message, parsed: ParsedContent) -> None:
+        """Set message data and render."""
+        self.current_message = message
+        self.parsed = parsed
+        self._render_message(message, parsed)
 
     @work(exclusive=True, thread=True)
     def action_new_mailbox(self) -> None:
