@@ -13,6 +13,7 @@ from tempmail_cli.session_store import delete_session, load_session, save_sessio
 @pytest.fixture
 def tmp_state_dir(monkeypatch, tmp_path):
     monkeypatch.setattr("tempmail_cli.session_store._DEFAULT_DIR", tmp_path)
+    monkeypatch.setattr("tempmail_cli.session_store._DEFAULT_FILE", tmp_path / "session.json")
     return tmp_path
 
 

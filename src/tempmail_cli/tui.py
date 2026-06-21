@@ -28,7 +28,7 @@ from tempmail_cli.session_store import (
 )
 
 
-class TempMailTUI(App):
+class TempMailTUI(App[None]):
     """TempMail TUI Application."""
 
     TITLE = "TempMail CLI"
@@ -118,7 +118,10 @@ class TempMailTUI(App):
     def _get_status_text(self) -> str:
         """Get status text with email address."""
         if self.account:
-            return f"📧 {self.account.address}  |  'y' copy email | 'o' copy code | 'm' copy msg | 'w' watch | 'q' quit"
+            return (
+                f"📧 {self.account.address}  |  "
+                "'y' copy email | 'o' copy code | 'm' copy msg | 'w' watch | 'q' quit"
+            )
         return "No session  |  Press 'n' to create mailbox  |  'q' quit"
 
     def _load_session(self) -> None:
@@ -278,7 +281,7 @@ class TempMailTUI(App):
             self._poller._interrupted = True
             self._update_status("Stopping watch...")
         else:
-            self.action_quit()
+            self.exit()
 
     def action_select_all(self) -> None:
         """Select all text in message view."""
