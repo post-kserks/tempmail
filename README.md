@@ -13,14 +13,27 @@ pipx install tempmail-cli
 ## Быстрый старт
 
 ```bash
+# Запустить интерактивный интерфейс
+./run.sh tui
+
 # Создать временный ящик
-tempmail new
+./run.sh new
 
 # Ждать письмо и скопировать код
-tempmail watch --copy
+./run.sh watch --copy
+```
 
-# Или использовать TUI
+### Установка через pip
+
+```bash
+pip install tempmail-cli
+# или
+pipx install tempmail-cli
+
+# Затем использовать команды напрямую
 tempmail tui
+tempmail new
+tempmail watch --copy
 ```
 
 ## Команды
@@ -57,28 +70,28 @@ tempmail tui
 
 ```bash
 # Быстрый сценарий
-tempmail new
-tempmail watch --copy
+./run.sh new
+./run.sh watch --copy
 
 # Ожидание от конкретного отправителя
-tempmail watch --from "github.com" --timeout 300
+./run.sh watch --from "github.com" --timeout 300
 
 # Использовать Guerrilla Mail
-tempmail new --provider guerrilla
+./run.sh new --provider guerrilla
 
 # Машиночитаемый вывод
-CODE=$(tempmail watch --json --timeout 60 | jq -r '.best_code')
+CODE=$(./run.sh watch --json --timeout 60 | jq -r '.best_code')
 
 # Несколько параллельных ящиков
-tempmail new --session-name acc1
-tempmail new --session-name acc2
-tempmail watch --session-name acc1
+./run.sh new --session-name acc1
+./run.sh new --session-name acc2
+./run.sh watch --session-name acc1
 ```
 
 ## TUI (интерактивный интерфейс)
 
 ```bash
-tempmail tui
+./run.sh tui
 ```
 
 ### Управление в TUI
