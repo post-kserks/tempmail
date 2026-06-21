@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tempmail"
-version = "0.1.0"
+version = "0.1.1"
 description = "CLI tool for temporary email addresses with verification code extraction"
 requires-python = ">=3.11"
 license = "MIT"
