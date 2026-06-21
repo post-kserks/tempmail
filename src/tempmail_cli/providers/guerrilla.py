@@ -40,6 +40,15 @@ class GuerrillaMailProvider(MailProvider):
         self._session = self._build_session()
 
     @staticmethod
+    def _parse_date(ts: int | str | None) -> datetime:
+        if ts is not None:
+            try:
+                return datetime.fromtimestamp(int(ts), tz=UTC)
+            except (ValueError, TypeError, OSError):
+                pass
+        return datetime.now(UTC)
+
+    @staticmethod
     def _build_session() -> requests.Session:
         session = requests.Session()
         retry = Retry(total=3, backoff_factor=0.5, status_forcelist=[502, 503, 504])
@@ -111,7 +120,7 @@ class GuerrillaMailProvider(MailProvider):
                     from_address=msg.get("mail_from", ""),
                     from_name=None,
                     subject=msg.get("mail_subject", ""),
-                    received_at=datetime.now(UTC),
+                    received_at=self._parse_date(msg.get("mail_date")),
                     text_body=None,
                     html_body=None,
                     seen=msg.get("mail_read", "0") == "1",
@@ -138,7 +147,7 @@ class GuerrillaMailProvider(MailProvider):
             from_address=sender,
             from_name=None,
             subject=subject,
-            received_at=datetime.now(UTC),
+            received_at=self._parse_date(data.get("mail_date")),
             text_body=text or None,
             html_body=msg or None,
             seen=False,

@@ -54,7 +54,7 @@ def save_session(account: Account, name: str = "default") -> Path:
             json.dump(_serialize_account(account), f, indent=2)
         os.chmod(tmp_path, stat.S_IRUSR | stat.S_IWUSR)  # 0o600
         os.replace(tmp_path, path)
-    except BaseException:
+    except Exception:
         tmp_path.unlink(missing_ok=True)
         raise
 

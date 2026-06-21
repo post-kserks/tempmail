@@ -35,7 +35,7 @@ class Poller:
             signal.signal(signal.SIGINT, self._handle_interrupt)
             signal.signal(signal.SIGTERM, self._handle_interrupt)
 
-    def _handle_interrupt(self, signum: int, frame: object) -> None:
+    def _handle_interrupt(self, signum: int, frame: object | None) -> None:
         self._interrupted = True
         logger.info("Received interrupt signal")
 
@@ -70,7 +70,6 @@ class Poller:
                 if self._match(msg, from_contains, subject_contains):
                     full = self._provider.get_message(self._account, msg.id)
                     return full
-                last_id = msg.id
 
     def _match(
         self,

@@ -141,6 +141,12 @@ class OutputFormatter:
         else:
             self._console.print(f"[dim]{message}[/dim]")
 
+    def print_raw(self, content: str, json_mode: bool = False) -> None:
+        if json_mode:
+            print(json.dumps({"raw": content}, default=_json_serializer))
+        else:
+            self._console.print(content)
+
     def print_clipboard_copy(self, content: str) -> None:
         if self._json:
             self._print_json({"copied": content})

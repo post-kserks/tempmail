@@ -20,7 +20,8 @@ from tempmail_cli.exceptions import TempMailError
 from tempmail_cli.models import Account, Message, ParsedContent
 from tempmail_cli.parser import parse_message
 from tempmail_cli.poller import Poller
-from tempmail_cli.provider_manager import list_providers, resolve
+from tempmail_cli.provider_manager import create_provider, list_providers, resolve
+from tempmail_cli.providers.base import MailProvider
 from tempmail_cli.session_store import (
     delete_session,
     load_session,
@@ -89,6 +90,7 @@ class TempMailTUI(App[None]):
         self.current_message: Message | None = None
         self.parsed: ParsedContent | None = None
         self._poller: Poller | None = None
+        self._provider: MailProvider | None = None
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -146,8 +148,8 @@ class TempMailTUI(App[None]):
         if not self.account:
             return
         try:
-            prov = resolve(self.account.provider)
-            self.messages = prov.list_messages(self.account)
+            self._provider = resolve(self.account.provider)
+            self.messages = self._provider.list_messages(self.account)
             self._render_inbox()
         except TempMailError as e:
             self._update_status(f"Error: {e}")
@@ -231,7 +233,7 @@ class TempMailTUI(App[None]):
         if not self.account:
             return
         try:
-            prov = resolve(self.account.provider)
+            prov = self._provider or resolve(self.account.provider)
             full_msg = prov.get_message(self.account, message_id)
             parsed = parse_message(full_msg)
             self.call_from_thread(self._render_message, full_msg, parsed)
@@ -244,6 +246,7 @@ class TempMailTUI(App[None]):
         self._update_status("Creating new mailbox...")
         try:
             prov = resolve()
+            self._provider = prov
             self.account = prov.create_account()
             save_session(self.account)
             self._update_status(f"Created: {self.account.address}")
@@ -261,7 +264,7 @@ class TempMailTUI(App[None]):
         self._update_status("Watching for new emails... Press Ctrl+C to stop")
 
         try:
-            prov = resolve(self.account.provider)
+            prov = self._provider or resolve(self.account.provider)
             self._poller = Poller(prov, self.account, interval=3.0, timeout=60.0)
             message = self._poller.wait_for_message()
             parsed = parse_message(message)
@@ -307,17 +310,21 @@ class TempMailTUI(App[None]):
             self._update_status("No active session.")
             return
         try:
-            prov = resolve(self.account.provider)
+            prov = self._provider or create_provider(self.account.provider)
             prov.delete_account(self.account)
+        except Exception:
+            pass  # Best-effort deletion — don't block even if provider is offline
+        finally:
             delete_session()
             self.account = None
+            self._provider = None
             self.messages = []
+            self.current_message = None
+            self.parsed = None
             self.query_one("#inbox-table", DataTable).clear()
             text_area = self.query_one("#message-view", TextArea)
             text_area.load_text("No message selected")
             self._update_status("Mailbox closed.")
-        except TempMailError as e:
-            self._update_status(f"Error: {e}")
 
     @on(Button.Pressed, "#status-bar")
     def on_status_click(self, event: Button.Pressed) -> None:

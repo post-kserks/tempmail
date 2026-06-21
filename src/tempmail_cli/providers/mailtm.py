@@ -43,6 +43,15 @@ class MailTmProvider(MailProvider):
         session.mount("http://", adapter)
         return session
 
+    @staticmethod
+    def _parse_date(iso_str: str | None) -> datetime:
+        if iso_str:
+            try:
+                return datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+            except (ValueError, TypeError):
+                pass
+        return datetime.now(UTC)
+
     def _request(self, method: str, path: str, **kwargs: object) -> requests.Response:
         self._limiter.wait()
         url = f"{self._base_url}{path}"
@@ -138,7 +147,7 @@ class MailTmProvider(MailProvider):
                     from_address=msg.get("from", {}).get("address", ""),
                     from_name=msg.get("from", {}).get("name"),
                     subject=msg.get("subject", ""),
-                    received_at=datetime.now(UTC),
+                    received_at=self._parse_date(msg.get("createdAt")),
                     text_body=None,  # full body fetched separately
                     html_body=None,
                     seen=msg.get("seen", False),
@@ -163,7 +172,7 @@ class MailTmProvider(MailProvider):
             from_address=msg.get("from", {}).get("address", ""),
             from_name=msg.get("from", {}).get("name"),
             subject=msg.get("subject", ""),
-            received_at=datetime.now(UTC),
+            received_at=self._parse_date(msg.get("createdAt")),
             text_body=msg.get("text"),
             html_body=html_body,
             seen=msg.get("seen", False),

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-06-21
+
+### Fixed
+- `except BaseException` narrowed to `except Exception` in session store
+- Poller no longer skips matching messages when non-matching ones advance `since_id`
+- Correct `received_at` timestamps parsed from API responses instead of `datetime.now()`
+- Clipboard false positive "copied" when copy actually failed
+- TUI mailbox close blocked when provider offline
+- TUI duplicate provider health checks on message fetch
+- Config `TEMPMAIL_NO_COLOR` now ignores `0`, `false`, `no`
+- Config empty `base_url` no longer produces confusing errors
+- Private member access removed from cli.py (uses public `print_raw`)
+
 ## [0.1.1] - 2026-06-21
 
 ## [0.1.0] - 2026-06-21

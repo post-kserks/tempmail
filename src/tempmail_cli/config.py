@@ -71,7 +71,7 @@ def load_config(config_path: Path | None = None) -> Config:
             for name, pcfg in raw["providers"].items():
                 existing = cfg.providers.get(name)
                 cfg.providers[name] = ProviderConfig(
-                    base_url=pcfg.get("base_url", existing.base_url if existing else ""),
+                    base_url=pcfg.get("base_url") or (existing.base_url if existing else ""),
                     requests_per_second=pcfg.get(
                         "requests_per_second", existing.requests_per_second if existing else 1.0
                     ),
@@ -94,7 +94,8 @@ def load_config(config_path: Path | None = None) -> Config:
         cfg.defaults.timeout = float(env)
     if env := os.environ.get("TEMPMAIL_INTERVAL"):
         cfg.defaults.interval = float(env)
-    if os.environ.get("TEMPMAIL_NO_COLOR"):
+    env_val = os.environ.get("TEMPMAIL_NO_COLOR")
+    if env_val and env_val.lower() not in ("0", "false", "no"):
         cfg.color = False
     if env := os.environ.get("TEMPMAIL_LOG_FILE"):
         cfg.log_file = env

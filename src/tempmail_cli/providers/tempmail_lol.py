@@ -32,6 +32,15 @@ class TempMailLolProvider(MailProvider):
         self._session = self._build_session()
 
     @staticmethod
+    def _parse_date(date_str: str | None) -> datetime:
+        if date_str:
+            try:
+                return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            except (ValueError, TypeError):
+                pass
+        return datetime.now(UTC)
+
+    @staticmethod
     def _build_session() -> requests.Session:
         session = requests.Session()
         retry = Retry(total=3, backoff_factor=0.5, status_forcelist=[502, 503, 504])
@@ -132,7 +141,7 @@ class TempMailLolProvider(MailProvider):
                     from_address=email.get("from", ""),
                     from_name=None,
                     subject=email.get("subject", ""),
-                    received_at=datetime.now(UTC),
+                    received_at=self._parse_date(email.get("date") or email.get("createdAt")),
                     text_body=email.get("body"),
                     html_body=email.get("html"),
                     seen=False,
@@ -159,7 +168,7 @@ class TempMailLolProvider(MailProvider):
             from_address=email.get("from", ""),
             from_name=None,
             subject=email.get("subject", ""),
-            received_at=datetime.now(UTC),
+            received_at=self._parse_date(email.get("date") or email.get("createdAt")),
             text_body=email.get("body"),
             html_body=email.get("html"),
             seen=False,

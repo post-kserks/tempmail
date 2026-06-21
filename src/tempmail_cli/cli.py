@@ -103,8 +103,7 @@ def watch(
 
         if copy:
             clip_text = parsed.best_code or parsed.best_link
-            if clip_text:
-                copy_to_clipboard(clip_text)
+            if clip_text and copy_to_clipboard(clip_text):
                 fmt.print_clipboard_copy(clip_text)
     except KeyboardInterrupt:
         fmt.print_info("Ожидание прервано пользователем")
@@ -161,13 +160,7 @@ def read(
 
         if raw:
             content = message.html_body or message.text_body or "(empty)"
-            if json_mode:
-                import json
-
-                from tempmail_cli.output import _json_serializer
-                fmt._console.print(json.dumps({"raw": content}, default=_json_serializer))
-            else:
-                fmt._console.print(content)
+            fmt.print_raw(content, json_mode)
             return
 
         parsed = parse_message(message)
@@ -175,12 +168,12 @@ def read(
 
         if copy:
             clip_text = parsed.best_code or parsed.best_link
-            if clip_text:
-                copy_to_clipboard(clip_text)
+            if clip_text and copy_to_clipboard(clip_text):
                 fmt.print_clipboard_copy(clip_text)
     except TempMailError as e:
         fmt.print_error(str(e), e.hint)
         raise typer.Exit(1)
+
 
 
 @app.command()
