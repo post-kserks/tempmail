@@ -38,8 +38,14 @@ class TestSessionStore:
     def test_file_permissions(self, tmp_state_dir):
         acc = _make_account()
         path = save_session(acc, "test")
-        mode = os.stat(path).st_mode
-        assert mode & 0o777 == 0o600
+        # On Windows, file permissions work differently
+        if os.name != "nt":
+            mode = os.stat(path).st_mode
+            assert mode & 0o777 == 0o600
+        else:
+            # On Windows, just check file exists and is readable
+            assert path.exists()
+            assert os.access(path, os.R_OK)
 
     def test_load_nonexistent_raises(self, tmp_state_dir):
         with pytest.raises(InvalidSessionError):

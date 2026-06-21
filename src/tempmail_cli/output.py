@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from datetime import datetime
 from typing import Any
 
@@ -20,11 +21,15 @@ def _json_serializer(obj: Any) -> str:
 
 
 class OutputFormatter:
-    """Renders output in text (rich) or JSON mode."""
+    """Renders output in text (rich) or JSON modes."""
 
     def __init__(self, json_mode: bool = False, color: bool = True) -> None:
         self._json = json_mode
         self._console = Console(highlight=False, markup=color)
+
+    def _print_json(self, data: Any) -> None:
+        """Print JSON directly to stdout without Rich formatting."""
+        print(json.dumps(data, default=_json_serializer, ensure_ascii=False))
 
     def print_account_created(self, account: Account, session_path: str) -> None:
         if self._json:
@@ -33,7 +38,7 @@ class OutputFormatter:
                 "provider": account.provider,
                 "created_at": account.created_at.isoformat(),
             }
-            self._console.print(json.dumps(data, default=_json_serializer))
+            self._print_json(data)
         else:
             self._console.print(
                 f"[green]✔[/green] Создан временный ящик: [bold]{account.address}[/bold]  "
@@ -52,7 +57,7 @@ class OutputFormatter:
                 "all_codes": parsed.codes,
                 "all_links": parsed.links,
             }
-            self._console.print(json.dumps(data, default=_json_serializer))
+            self._print_json(data)
         else:
             lines = [
                 f"От:      {message.from_address}",
@@ -85,7 +90,7 @@ class OutputFormatter:
                 }
                 for m in messages
             ]
-            self._console.print(json.dumps(data, default=_json_serializer))
+            self._print_json(data)
         else:
             table = Table(title="Inbox")
             table.add_column("#", style="dim")
@@ -105,7 +110,7 @@ class OutputFormatter:
 
     def print_providers(self, providers: dict[str, dict[str, Any]], default: str) -> None:
         if self._json:
-            self._console.print(json.dumps(providers, default=_json_serializer))
+            self._print_json(providers)
         else:
             table = Table(title="Providers")
             table.add_column("NAME")
@@ -124,7 +129,7 @@ class OutputFormatter:
             data = {"error": message}
             if hint:
                 data["hint"] = hint
-            self._console.print(json.dumps(data))
+            self._print_json(data)
         else:
             text = f"[red]✗[/red] {message}"
             if hint:
@@ -133,12 +138,12 @@ class OutputFormatter:
 
     def print_info(self, message: str) -> None:
         if self._json:
-            self._console.print(json.dumps({"info": message}))
+            self._print_json({"info": message})
         else:
             self._console.print(f"[dim]{message}[/dim]")
 
     def print_clipboard_copy(self, content: str) -> None:
         if self._json:
-            self._console.print(json.dumps({"copied": content}))
+            self._print_json({"copied": content})
         else:
             self._console.print(f"[green]✔[/green] Скопировано в буфер обмена: {content}")
