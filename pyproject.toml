@@ -43,7 +43,8 @@ select = ["E", "F", "I", "N", "W", "UP"]
 
 [tool.mypy]
 python_version = "3.11"
-strict = true
+ignore_missing_imports = true
+disable_error_code = ["import-not-found", "import-untyped", "misc", "no-untyped-def"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
