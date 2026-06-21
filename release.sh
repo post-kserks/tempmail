@@ -26,9 +26,9 @@ fi
 echo "Updating version to $VERSION in src/tempmail_cli/__init__.py"
 sed -i '' "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" src/tempmail_cli/__init__.py
 
-# Update version in pyproject.toml
+# Update version in pyproject.toml (only line 7 - the project version)
 echo "Updating version to $VERSION in pyproject.toml"
-sed -i '' "s/version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+sed -i '' "7s/.*/version = \"$VERSION\"/" pyproject.toml
 
 # Update CHANGELOG.md
 echo "Updating CHANGELOG.md"
