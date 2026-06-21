@@ -5,9 +5,9 @@
 ## Установка
 
 ```bash
-pip install tempmail-cli
+pip install tempmail
 # или
-pipx install tempmail-cli
+pipx install tempmail
 ```
 
 ## Быстрый старт
@@ -26,9 +26,9 @@ pipx install tempmail-cli
 ### Установка через pip
 
 ```bash
-pip install tempmail-cli
+pip install tempmail
 # или
-pipx install tempmail-cli
+pipx install tempmail
 
 # Затем использовать команды напрямую
 tempmail tui
@@ -114,7 +114,7 @@ CODE=$(./run.sh watch --json --timeout 60 | jq -r '.best_code')
 
 ## Конфигурация
 
-Файл: `~/.config/tempmail-cli/config.yaml`
+Файл: `~/.config/tempmail/config.yaml`
 
 ```yaml
 default_provider: mailtm

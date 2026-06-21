@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "tempmail-cli"
+name = "tempmail"
 version = "0.1.0"
 description = "CLI tool for temporary email addresses with verification code extraction"
 requires-python = ">=3.11"
