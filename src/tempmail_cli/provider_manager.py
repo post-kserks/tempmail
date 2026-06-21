@@ -9,12 +9,14 @@ from tempmail_cli.exceptions import ProviderUnavailableError
 from tempmail_cli.providers.base import MailProvider
 from tempmail_cli.providers.guerrilla import GuerrillaMailProvider
 from tempmail_cli.providers.mailtm import MailTmProvider
+from tempmail_cli.providers.tempmail_lol import TempMailLolProvider
 
 logger = logging.getLogger(__name__)
 
 _REGISTRY: dict[str, type[MailProvider]] = {
     "mailtm": MailTmProvider,
     "guerrilla": GuerrillaMailProvider,
+    "tempmail-lol": TempMailLolProvider,
 }
 
 
@@ -42,6 +44,11 @@ def create_provider(name: str) -> MailProvider:
         return GuerrillaMailProvider(
             base_url=pcfg.base_url if pcfg else "https://api.guerrillamail.com/ajax.php",
             rps=pcfg.requests_per_second if pcfg else 0.5,
+        )
+    if name == "tempmail-lol":
+        return TempMailLolProvider(
+            base_url=pcfg.base_url if pcfg else "https://api.tempmail.lol/v2",
+            rps=pcfg.requests_per_second if pcfg else 1.0,
         )
     return provider_class()
 
